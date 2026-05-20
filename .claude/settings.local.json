@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(npx --yes playwright@latest chromium install)",
+      "Bash(which chromium-browser chromium google-chrome 2>/dev/null || echo \"not found\" *)",
+      "Read(//Applications/**)",
+      "Bash(npx playwright *)",
+      "Bash(node /tmp/woodshed_screenshot.mjs)",
+      "Bash(npx vite *)",
+      "Bash(node scripts/generate-icons.mjs)"
+    ]
+  }
+}

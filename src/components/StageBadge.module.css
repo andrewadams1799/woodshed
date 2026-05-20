@@ -1,0 +1,38 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 500;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.sm {
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.md {
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+.idea {
+  background: var(--stage-idea-bg);
+  color: var(--stage-idea);
+}
+.lyrics {
+  background: var(--stage-lyrics-bg);
+  color: var(--stage-lyrics);
+}
+.demo {
+  background: var(--stage-demo-bg);
+  color: #b45309;
+}
+.produced {
+  background: var(--stage-produced-bg);
+  color: var(--stage-produced);
+}
+.done {
+  background: var(--stage-done-bg);
+  color: var(--stage-done);
+}
