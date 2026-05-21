@@ -7,6 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: { skipWaiting: true, clientsClaim: true },
       includeAssets: ['icon-180.png', 'icon-192.png', 'icon-512.png'],
       manifest: {
         name: 'Woodshed',
