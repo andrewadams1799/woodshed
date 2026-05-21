@@ -129,3 +129,11 @@
   text-decoration: underline;
   margin-top: 4px;
 }
+
+.codeInput {
+  text-align: center;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  height: 52px;
+}
