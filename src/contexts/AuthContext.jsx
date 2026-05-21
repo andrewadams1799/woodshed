@@ -9,19 +9,36 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        supabase.auth.signOut()
-        setLoading(false)
-        return
-      }
+    let settled = false
+
+    // If auth hasn't resolved in 8 seconds, clear the session and show login
+    const timeout = setTimeout(() => {
+      if (settled) return
+      settled = true
+      supabase.auth.signOut()
+      setLoading(false)
+    }, 8000)
+
+    function resolve(session) {
+      if (settled) return
+      settled = true
+      clearTimeout(timeout)
       setUser(session?.user ?? null)
       if (session?.user) {
         loadProfile(session.user.id)
       } else {
         setLoading(false)
       }
-    }).catch(() => setLoading(false))
+    }
+
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        supabase.auth.signOut()
+        resolve(null)
+      } else {
+        resolve(session)
+      }
+    }).catch(() => resolve(null))
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
@@ -34,7 +51,10 @@ export function AuthProvider({ children }) {
         }
       }
     )
-    return () => subscription.unsubscribe()
+    return () => {
+      clearTimeout(timeout)
+      subscription.unsubscribe()
+    }
   }, [])
 
   async function loadProfile(userId) {
