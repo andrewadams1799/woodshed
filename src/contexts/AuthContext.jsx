@@ -22,12 +22,36 @@ export function AuthProvider({ children }) {
 
   const [user,    setUser]    = useState(cachedUser)
   const [profile, setProfile] = useState(cache?.profile ?? null)
-  // Skip the loading screen entirely if we have cached credentials
   const [loading, setLoading] = useState(!cache)
 
   useEffect(() => {
+    let done = false
+
+    function finish(authUser, authProfile) {
+      if (done) return
+      done = true
+      setUser(authUser)
+      setProfile(authProfile)
+      if (authUser) writeCache(authUser, authProfile)
+      else writeCache(null, null)
+      setLoading(false)
+    }
+
+    // Timeout: if auth hangs for 6 seconds, just show login
+    const timeout = setTimeout(() => finish(null, null), 6000)
+
+    // Primary: getSession resolves quickly from localStorage
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      clearTimeout(timeout)
+      if (!session?.user) { finish(null, null); return }
+      const p = await fetchProfile(session.user.id)
+      finish(session.user, p)
+    }).catch(() => { clearTimeout(timeout); finish(null, null) })
+
+    // Secondary: onAuthStateChange handles sign-in/sign-out after initial load
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!done) return // let getSession() handle the initial state
         const authUser = session?.user ?? null
         setUser(authUser)
         if (authUser) {
@@ -38,10 +62,10 @@ export function AuthProvider({ children }) {
           setProfile(null)
           writeCache(null, null)
         }
-        setLoading(false)
       }
     )
-    return () => subscription.unsubscribe()
+
+    return () => { clearTimeout(timeout); subscription.unsubscribe() }
   }, [])
 
   async function fetchProfile(userId) {
@@ -56,6 +80,8 @@ export function AuthProvider({ children }) {
   async function signOut() {
     writeCache(null, null)
     await supabase.auth.signOut()
+    setUser(null)
+    setProfile(null)
   }
 
   async function createProfile(name, color) {

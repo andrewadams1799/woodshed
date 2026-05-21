@@ -7,7 +7,13 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      workbox: { skipWaiting: true, clientsClaim: true },
+      workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
+        // Never serve HTML from cache — always fetch fresh from server
+        navigateFallback: null,
+        runtimeCaching: [],
+      },
       includeAssets: ['icon-180.png', 'icon-192.png', 'icon-512.png'],
       manifest: {
         name: 'Woodshed',
