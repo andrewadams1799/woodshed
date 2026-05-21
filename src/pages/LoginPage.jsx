@@ -55,7 +55,7 @@ export default function LoginPage() {
           <>
             <div className={styles.header}>
               <h1 className={styles.heading}>Sign in</h1>
-              <p className={styles.sub}>Enter your email and we'll send you a 6-digit code.</p>
+              <p className={styles.sub}>Enter your email and we'll send you an 8-digit code.</p>
             </div>
 
             <form onSubmit={handleSendCode} className={styles.form}>
@@ -83,7 +83,7 @@ export default function LoginPage() {
             <div className={styles.header}>
               <h1 className={styles.heading}>Check your email</h1>
               <p className={styles.sub}>
-                We sent a 6-digit code to <strong>{email}</strong>. Enter it below.
+                We sent an 8-digit code to <strong>{email}</strong>. Enter it below.
               </p>
             </div>
 
@@ -92,7 +92,7 @@ export default function LoginPage() {
                 autoFocus
                 type="text"
                 inputMode="numeric"
-                placeholder="123456"
+                placeholder="12345678"
                 value={code}
                 onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
                 className={`${styles.input} ${styles.codeInput}`}
