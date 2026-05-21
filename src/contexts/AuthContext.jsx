@@ -2,84 +2,59 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
+const CACHE_KEY = 'woodshed_cache'
+
+function readCache() {
+  try { return JSON.parse(localStorage.getItem(CACHE_KEY)) ?? null } catch { return null }
+}
+
+function writeCache(user, profile) {
+  if (user) {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ userId: user.id, email: user.email, profile }))
+  } else {
+    localStorage.removeItem(CACHE_KEY)
+  }
+}
 
 export function AuthProvider({ children }) {
-  const [user,    setUser]    = useState(null)
-  const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const cache = readCache()
+  const cachedUser = cache ? { id: cache.userId, email: cache.email } : null
+
+  const [user,    setUser]    = useState(cachedUser)
+  const [profile, setProfile] = useState(cache?.profile ?? null)
+  // Skip the loading screen entirely if we have cached credentials
+  const [loading, setLoading] = useState(!cache)
 
   useEffect(() => {
-    let settled = false
-
-    // If auth hasn't resolved in 8 seconds, clear the session and show login
-    const timeout = setTimeout(() => {
-      if (settled) return
-      settled = true
-      supabase.auth.signOut()
-      setLoading(false)
-    }, 8000)
-
-    function resolve(session) {
-      if (settled) return
-      settled = true
-      clearTimeout(timeout)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        loadProfile(session.user.id)
-      } else {
-        setLoading(false)
-      }
-    }
-
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        supabase.auth.signOut()
-        resolve(null)
-      } else {
-        resolve(session)
-      }
-    }).catch(() => resolve(null))
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          await loadProfile(session.user.id)
+        const authUser = session?.user ?? null
+        setUser(authUser)
+        if (authUser) {
+          const p = await fetchProfile(authUser.id)
+          setProfile(p)
+          writeCache(authUser, p)
         } else {
           setProfile(null)
-          setLoading(false)
+          writeCache(null, null)
         }
+        setLoading(false)
       }
     )
-    return () => {
-      clearTimeout(timeout)
-      subscription.unsubscribe()
-    }
+    return () => subscription.unsubscribe()
   }, [])
 
-  async function loadProfile(userId) {
+  async function fetchProfile(userId) {
     try {
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-      setProfile(data ?? null)
+      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
+      return data ?? null
     } catch {
-      setProfile(null)
-    } finally {
-      setLoading(false)
+      return null
     }
-  }
-
-  async function signIn(email) {
-    return supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin },
-    })
   }
 
   async function signOut() {
+    writeCache(null, null)
     await supabase.auth.signOut()
   }
 
@@ -97,11 +72,12 @@ export function AuthProvider({ children }) {
     if (selectError) return { error: selectError }
 
     setProfile(data)
+    writeCache(user, data)
     return { error: null }
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signOut, createProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, signOut, createProfile }}>
       {children}
     </AuthContext.Provider>
   )
