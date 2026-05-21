@@ -94,9 +94,9 @@ export default function LoginPage() {
                 inputMode="numeric"
                 placeholder="123456"
                 value={code}
-                onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
                 className={`${styles.input} ${styles.codeInput}`}
-                maxLength={6}
+                maxLength={8}
                 required
               />
               {error && <p className={styles.error}>{error}</p>}
