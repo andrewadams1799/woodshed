@@ -4,6 +4,7 @@ import styles from './SongPage.module.css'
 import StageBadge from '../components/StageBadge'
 import Avatar from '../components/Avatar'
 import TimeAgo from '../components/TimeAgo'
+import AudioPlayer from '../components/AudioPlayer'
 import { STAGES, FILE_TYPES, formatBytes, getFileType } from '../data/mockData'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -15,13 +16,14 @@ export default function SongPage() {
   const navigate    = useNavigate()
   const { profile } = useAuth()
 
-  const [song,      setSong]      = useState(null)
-  const [files,     setFiles]     = useState([])
-  const [activity,  setActivity]  = useState([])
-  const [profiles,  setProfiles]  = useState({})
-  const [loading,   setLoading]   = useState(true)
-  const [tab,       setTab]       = useState('Overview')
-  const [stageOpen, setStageOpen] = useState(false)
+  const [song,         setSong]         = useState(null)
+  const [files,        setFiles]        = useState([])
+  const [activity,     setActivity]     = useState([])
+  const [profiles,     setProfiles]     = useState({})
+  const [loading,      setLoading]      = useState(true)
+  const [tab,          setTab]          = useState('Overview')
+  const [stageOpen,    setStageOpen]    = useState(false)
+  const [currentTrack, setCurrentTrack] = useState(null)
 
   useEffect(() => { fetchAll() }, [id])
 
@@ -68,6 +70,13 @@ export default function SongPage() {
     if (newStage === song.stage) return
     await updateSong({ stage: newStage })
     await logActivity(`changed stage to ${STAGES.find(s => s.id === newStage)?.label}`)
+  }
+
+  async function handlePlay(file) {
+    const { data, error } = await supabase.storage
+      .from('song-files')
+      .createSignedUrl(file.storage_path, 3600)
+    if (!error && data) setCurrentTrack({ name: file.name, url: data.signedUrl })
   }
 
   if (loading) {
@@ -140,6 +149,10 @@ export default function SongPage() {
         </div>
       </div>
 
+      {currentTrack && (
+        <AudioPlayer track={currentTrack} onClose={() => setCurrentTrack(null)} />
+      )}
+
       <main className={styles.main}>
         <div className={styles.container}>
           {tab === 'Overview' && (
@@ -170,6 +183,8 @@ export default function SongPage() {
               onUpload={(file) => setFiles(prev => [file, ...prev])}
               onDelete={(fileId) => setFiles(prev => prev.filter(f => f.id !== fileId))}
               logActivity={logActivity}
+              onPlay={handlePlay}
+              currentTrackName={currentTrack?.name}
             />
           )}
           {tab === 'Activity' && (
@@ -371,7 +386,7 @@ function LyricsTab({ song, onSave }) {
 
 // ── Files ─────────────────────────────────────────────────────
 
-function FilesTab({ songId, files, profiles, profile, onUpload, onDelete, logActivity }) {
+function FilesTab({ songId, files, profiles, profile, onUpload, onDelete, logActivity, onPlay, currentTrackName }) {
   const inputRef   = useRef()
   const [uploading, setUploading] = useState(false)
   const [error,     setError]     = useState('')
@@ -461,7 +476,26 @@ function FilesTab({ songId, files, profiles, profile, onUpload, onDelete, logAct
             const config = FILE_TYPES[f.type] ?? { icon: '📎', label: 'File' }
             return (
               <div key={f.id} className={styles.fileRow}>
-                <span className={styles.fileIcon}>{config.icon}</span>
+                {f.type === 'audio' ? (
+                  <button
+                    className={`${styles.filePlayBtn} ${currentTrackName === f.name ? styles.filePlayBtnActive : ''}`}
+                    onClick={() => onPlay(f)}
+                    title="Play"
+                  >
+                    {currentTrackName === f.name ? (
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                        <rect x="2" y="2" width="4" height="12" rx="1"/>
+                        <rect x="10" y="2" width="4" height="12" rx="1"/>
+                      </svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M4 2.5l10 5.5-10 5.5V2.5z"/>
+                      </svg>
+                    )}
+                  </button>
+                ) : (
+                  <span className={styles.fileIcon}>{config.icon}</span>
+                )}
                 <div className={styles.fileInfo}>
                   <span className={styles.fileName}>{f.name}</span>
                   <span className={styles.fileMeta}>
